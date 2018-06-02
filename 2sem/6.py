@@ -4,46 +4,35 @@ import plotly
 import plotly.graph_objs as go
 from scipy.integrate import odeint
 
-file = open('C:/Users/Polina/Desktop/универ/vm/ex1.txt', 'r') 
-lines = file.readlines() 
-ex1 = np.zeros((21,81))
-for i in range(21):
-    ex1[i] = list(map(lambda x: float(x),lines[i].split(',')))
-ex2 = np.zeros((21,21))
-
 #start conditions
 T = 0.1
-def a(w): return 1
-def b(w): return 0
-def c(point): return math.sin(point[0])
+def a(x,t): return 1
+def b(x,t): return 0
+def c(x,t): return math.sin(x)
 def alpha1(t):return 1
 def alpha2(t):return 1
 def beta1(t):return 1
 def beta2(t):return 1
 
 #depends on u(x,t)
-#w = (x,t)
-def u(w): #return w[0] + w[1]
-    return w[0]**3 + w[1]**3 
-def dudx(w): #return 1
-    return 3*w[0]**2 
-def dudt(w): #return 1
-    return 3*w[1]**2 
-def du2dx(w): #return 0
-    return 6*w[0] 
+def u(x,t): #return x+t
+    return x**3 + t**3 
+def dudx(x,t): #return 1
+    return 3*x**2 
+def dudt(x,t): #return 1
+    return 3*t**2 
+def du2dx(x,t): #return 0
+    return 6*x 
 
-def fi(x): return u([x,0])
-def f(w): return dudt(w) - du2dx(w) - u(w)*math.sin(w[0])
-def alpha(t): return alpha1(t)*u([0,t]) - alpha2(t)*dudx([0,t]) 
-def beta(t): return beta1(t)*u([1,t]) + beta2(t)*dudx([1,t])
+def fi(x): return u(x,0)
+def f(x,t): return dudt(x,t) - du2dx(x,t) - u(x,t)*math.sin(x)
+def alpha(t): return alpha1(t)*u(0,t) - alpha2(t)*dudx(0,t) 
+def beta(t): return beta1(t)*u(1,t) + beta2(t)*dudx(1,t) 
 
-def rnd(arr,n):
-    for i in range(len(arr)):
-        for j in range(len(arr[0])):
-            arr[i][j] = round(arr[i][j],n)
-    return(arr)
+def rnd(arr,n): #rounds all values in 2d arr
+    return([[round(arr[i][j],n) for j in range(len(arr[0]))] for i in range(len(arr))])
 
-def sweep(n,A,B,C,G):
+def sweep(n,A,B,C,G): #system range = n+1
     S,T = [],[]
     S.append(C[0]/B[0])
     T.append(-G[0]/B[0])
@@ -56,129 +45,125 @@ def sweep(n,A,B,C,G):
         Y[i] = S[i]*Y[i+1]+T[i]
     return Y
 
-def setka(N,M):
+def grid(N,M): #N,M - numbers of parts
     W = np.zeros((N+1,M+1,2))
     for i in range(N+1):
         for k in range(M+1):
             W[i][k] = (i/N,k*T/M)
     return W
 
-def Lh(i,k,W,U):
-    h = 1/(len(W)-1)
-    return a(W[i][k])*(U[i+1][k]-2*U[i][k]+U[i-1][k])/h**2 + b(W[i][k])*(U[i+1][k]-U[i-1][k])/(2*h) + c(W[i][k])*U[i][k]
+#values of exact solution in points 6x6
+ex_sol = np.zeros((6,6))
+W_tmp = grid(5,5)
+ex_sol = [[u(W_tmp[i][j][0],W_tmp[i][j][1]) for j in range(6)] for i in range(6)]
 
-def solution(N,M,W):
+def Lh(i,k,h,tau,U):
+    return a(i*h,tau*k)*(U[i+1][k]-2*U[i][k]+U[i-1][k])/(h**2) + b(i*h,tau*k)*(U[i+1][k]-U[i-1][k])/(2*h) + c(i*h,tau*k)*U[i][k]
+
+def explicit_scheme(N,M):
     U = np.zeros((N+1,M+1))
-    h, tau = 1/N, T/M
-    for i in range(N+1): U[i][0] = fi(W[i][0][0])
+    h,tau = 1/N,T/M
+    for i in range(N+1): U[i][0] = fi(i*h)
     for k in range(1,M+1):
-        for i in range(1,N): U[i][k] = U[i][k-1] + tau*(Lh(i,k-1,W,U)+f(W[i][k-1]))
-        U[0][k] = (alpha(W[0][k][1]) + alpha2(W[0][k][1])*(4*U[1][k]-U[2][k])/(2*h)) / (alpha1(W[0][k][1])+3*alpha2(W[0][k][1])/(2*h))
-        U[N][k] = (beta(W[0][k][1]) - beta2(W[0][k][1])*(-4*U[N-1][k]+U[N-2][k])/(2*h)) / (beta1(W[0][k][1])+3*beta2(W[0][k][1])/(2*h))
+        for i in range(1,N): U[i][k] = U[i][k-1] + tau*(Lh(i,k-1,h,tau,U)+f(h*i,tau*(k-1)))
+        U[0][k] = (alpha(tau*k) + alpha2(tau*k)*(4*U[1][k]-U[2][k])/(2*h)) / (alpha1(tau*k)+3*alpha2(tau*k)/(2*h))
+        U[N][k] = (beta(tau*k) - beta2(tau*k)*(-4*U[N-1][k]+U[N-2][k])/(2*h)) / (beta1(tau*k)+3*beta2(tau*k)/(2*h))
     return U
 
-def get_M(N,T):
+def get_M(N,T): #calculate M for explicit scheme
     h = 1/N
     tau = h**2/2
     return int(T/tau)+1
 
-def weights_schema(N,M,sigma):
-    W = setka(N,M)
+def weights_scheme(N,M,sigma):
     U = np.zeros((N+1,M+1))
-    h, tau = 1/N, T/M
-    for i in range(N+1): U[i][0] = fi(W[i][0][0])
+    h,tau = 1/N,T/M
+    for i in range(N+1): U[i][0] = fi(i*h)
     if sigma == 0:
         for k in range(1,M+1):         
-            for i in range(1,N): U[i][k] = U[i][k-1] + tau*(Lh(i,k-1,W,U)+f(W[i][k-1]))
-            U[0][k] = (alpha(W[0][k][1])+alpha2(W[0][k][1])*U[1][k]/h) / (alpha1(W[0][k][1])+alpha2(W[0][k][1])/h)
-            U[N][k] = (beta(W[0][k][1])+beta2(W[0][k][1])*U[N-1][k]/h) / (beta1(W[0][k][1])+beta2(W[0][k][1])/h)
+            for i in range(1,N): U[i][k] = U[i][k-1] + tau*(Lh(i,k-1,h,tau,U) + f(i*h,tau*(k-1)))
+            U[0][k] = (alpha(tau*k)+alpha2(tau*k)*U[1][k]/h) / (alpha1(tau*k)+alpha2(tau*k)/h)
+            U[N][k] = (beta(tau*k)+beta2(tau*k)*U[N-1][k]/h) / (beta1(tau*k)+beta2(tau*k)/h)
+    #elif sigma == 1:
+        #TODO
     elif sigma == 1/2:
         for k in range(1,M+1):
             A,B,C,G = [],[],[],[]
             A.append(0)
-            B.append(-alpha1(W[0][k][1])-alpha2(W[0][k][1])/h)
-            C.append(-alpha2(W[0][k][1])/h)
-            G.append(alpha(W[0][k][1]))
-            for i in range(0,N):
-                A.append(sigma*a(W[i][k])/(h**2) - b(W[i][k])/(2*h))
-                B.append(2*sigma*a(W[i][k])/(h**2) - c(W[i][k])+ 1/tau)
-                C.append(sigma*a(W[i][k])/(h**2) + b(W[i][k])/(2*h))
-                G.append(-U[i][k-1]/tau - (1-sigma)*Lh(i,k-1,W,U) - f([W[i][k][0],W[i][k][1]-tau/2]))    
-            A.append(-beta2(W[0][k][1])/h)
-            B.append(-beta1(W[0][k][1])-beta2(W[0][k][1])/h)
+            B.append(-alpha1(tau*k)-alpha2(tau*k)/h)
+            C.append(-alpha2(tau*k)/h)
+            G.append(alpha(tau*k))
+            for i in range(1,N):
+                A.append(sigma*a(h*i,tau*k)/(h**2) - b(h*i,tau*k)/(2*h))
+                B.append(2*sigma*a(h*i,tau*k)/(h**2) - c(h*i,tau*k)+ 1/tau)
+                C.append(sigma*a(h*i,tau*k)/(h**2) + b(h*i,tau*k)/(2*h))
+                G.append(-U[i][k-1]/tau - (1-sigma)*Lh(i,k-1,h,tau,U) - f(h*i,tau*k-tau/2))    
+            A.append(-beta2(tau*k)/h)
+            B.append(-beta1(tau*k)-beta2(tau*k)/h)
             C.append(0)
-            G.append(beta(W[0][k][1]))   
-            for i in range(0,N+1): U[i][k] = sweep(N,A,B,C,G)[i]
-    return U 
+            G.append(beta(tau*k))   
+            for i in range(N+1): U[i][k] = sweep(N,A,B,C,G)[i]
+    return U
 
+def norm(u1,u2):
+    mx = 0
+    k1,k2,k3,k4 = (len(u2)-1)//5,(len(u2[0])-1)//5,(len(u1)-1)//5,(len(u1[0])-1)//5
+    for i in range(6):
+        for j in range(6):
+            if abs(u1[i*k3][j*k4] - u2[i*k1][j*k2]) > mx:
+                mx = abs(u1[i*k3][j*k4] - u2[i*k1][j*k2])
+    return mx
 
-
-def table1(N,M,W,U):
-    W2 = setka(5,5)
-    U2 = np.zeros((6,6))
-    for i in range(len(W)):
-        for j in range(len(W[0])):
-            if i%(N/5)==0 and j%(M/5)==0: U2[i//(N//5)][j//(M//5)] = U[i][j]
-    v = np.concatenate((np.array([[W2[i][0][0] for i in range(len(W2))]]).T,rnd(U2,3)),axis=1).T
+def table1(N,M,U):
+    k1 = (len(U)-1)//5
+    k2 = (len(U[0])-1)//5
+    W = grid(5,5)
+    Us = np.zeros((6,6))
+    for i in range(6):
+        for j in range(6):
+            Us[i][j] = U[i*k1][j*k2]
+    v = np.concatenate((np.array([[W[i][0][0] for i in range(len(W))]]).T,rnd(Us,5)),axis=1).T
     trace = go.Table(
-        header=dict(values=['x/t']+[str(W2[0][i][1]) for i in range(len(W2[0]))]),
+        header=dict(values=['x/t']+[str(W[0][i][1]) for i in range(len(W[0]))]),
         cells=dict(values= v.tolist()))    
     data = [trace] 
     plotly.offline.plot(data)    
 
-def norm(u,smth):
-    mx = 0
-    k1 = (len(smth)-1)//(len(u)-1)
-    k2 = (len(smth[0])-1)//(len(u[0])-1)
-    for i in range(len(u)):
-        for j in range(len(u[0])):
-            if abs(u[i][j] - smth[i*k1][j*k2]) > mx:
-                mx = abs(u[i][j] - smth[i*k1][j*k2])
-    return mx
-
-def table2(U_lst,U2_lst,num):
-    if num == 1:
-        norm1,norm2 = [norm(U_lst[i],ex1) for i in range(3)],[norm(U_lst[i],U2_lst[i]) for i in range(3)]
-    if num == 2:
-        norm1,norm2 = [0,0,0],[norm(U_lst[i],U2_lst[i]) for i in range(3)]
+def table2(U1_lst,U2_lst):
+    norm1,norm2 = [norm(U1_lst[i],ex_sol) for i in range(3)],[norm(U1_lst[i],U2_lst[i]) for i in range(3)]
     trace = go.Table(
-        header=dict(values=['h','tau','||ex - u(h,tau)||','||u(h,tau) - u(2h,tau2)||']),
+        header=dict(values=['h','tau','||ex - u||','||u - u2||']),
         cells=dict(values=[[0.2,0.1,0.05],[0.02,0.005,0.00125],norm1,norm2]))    
     data = [trace] 
     plotly.offline.plot(data)    
 
-def plot_table(N_lst,M,schema,table_num):
-    U_lst = []
+def plot_table(N_lst,M,scheme,table_num): #table_num: (0,1,2,3) = (table2,table1(5),table1(10),table1(20))
+    if scheme == 2: sigma = 1/2 #change sigma here
+    U1_lst = []
     U2_lst = []
     for i in range(len(N_lst)):
         N = N_lst[i]       
-        if schema == 1: M = get_M(N,T)
+        if scheme == 1: M = get_M(N,T)
         h,tau = 1/N,T/M
-        W = setka(N,M)
-        if schema == 1: U = solution(N,M,W)
-        if schema == 2: U = weights_schema(N,M,1/2) #change sigma here
-        U_lst.append(U)
+        U = explicit_scheme(N,M) if scheme == 1 else weights_scheme(N,M,sigma)
+        U1_lst.append(U)
         if i > 0: U2_lst.append(U)
-        if i+1 == table_num: table1(N,M,W,U)
+        if i+1 == table_num: table1(N,M,U)
     N = N_lst[-1]*2       
-    M = get_M(N,T)
+    if scheme == 1: M = get_M(N,T)
     h,tau = 1/N,T/M
-    W = setka(N,M)
-    if schema == 1: U = solution(N,M,W)
-    if schema == 2: U = weights_schema(N,M,1/2) #change sigma here
+    U = explicit_scheme(N,M) if scheme == 1 else weights_scheme(N,M,sigma)
     U2_lst.append(U)
-    if table_num == 0: table2(U_lst,U2_lst,1)
+    if table_num == 0: table2(U1_lst,U2_lst)
 
 #plot_table([5,10,20],0,1,1) #schema1, N = 5
 #plot_table([5,10,20],0,1,2) #schema1, N = 10
 #plot_table([5,10,20],0,1,3) #schema1, N = 20
 #plot_table([5,10,20],0,1,0) #schema1, table for all
+
 #plot_table([5,10,20],10,2,1) #schema2, N = 5, M = 10
 #plot_table([5,10,20],10,2,2) #schema2, N = 10, M = 10
-#plot_table([5,10,20],10,2,3) #schema2, N = 20, M = 10
-plot_table([5,10,20],10,2,0) #schema2, table for all
-#plot_table([5,10,20],100,2,1) #schema2, N = 5, M = 100
-#plot_table([5,10,20],100,2,2) #schema2, N = 10, M = 100
-#plot_table([5,10,20],100,2,3) #schema2, N = 20, M = 100
-#plot_table([5,10,20],100,2,0) #schema2, table for all
+#plot_table([5,10,40],10,2,3) #schema2, N = 20, M = 10
+#plot_table([5,10,20],10,2,0) #schema2, table for all
+
 
