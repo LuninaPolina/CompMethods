@@ -15,14 +15,18 @@ def beta1(t):return 1
 def beta2(t):return 1
 
 #depends on u(x,t)
-def u(x,t): #return x+t
-    return x**3 + t**3 
-def dudx(x,t): #return 1
-    return 3*x**2 
-def dudt(x,t): #return 1
-    return 3*t**2 
-def du2dx(x,t): #return 0
-    return 6*x 
+def u(x,t):
+    return x+t
+    #return x**3 + t**3 
+def dudx(x,t):
+    return 1
+    #return 3*x**2 
+def dudt(x,t):
+    return 1
+    #return 3*t**2 
+def du2dx(x,t):
+    return 0
+    #return 6*x 
 
 def fi(x): return u(x,0)
 def f(x,t): return dudt(x,t) - du2dx(x,t) - u(x,t)*math.sin(x)
@@ -84,20 +88,19 @@ def weights_scheme(N,M,sigma):
             for i in range(1,N): U[i][k] = U[i][k-1] + tau*(Lh(i,k-1,h,tau,U) + f(i*h,tau*(k-1)))
             U[0][k] = (alpha(tau*k)+alpha2(tau*k)*U[1][k]/h) / (alpha1(tau*k)+alpha2(tau*k)/h)
             U[N][k] = (beta(tau*k)+beta2(tau*k)*U[N-1][k]/h) / (beta1(tau*k)+beta2(tau*k)/h)
-    #elif sigma == 1:
-        #TODO
-    elif sigma == 1/2:
+    elif sigma == 1/2 or sigma == 1:
         for k in range(1,M+1):
             A,B,C,G = [],[],[],[]
             A.append(0)
             B.append(-alpha1(tau*k)-alpha2(tau*k)/h)
             C.append(-alpha2(tau*k)/h)
             G.append(alpha(tau*k))
+            tk = tau*k-tau/2 if sigma == 1/2 else tau*k
             for i in range(1,N):
                 A.append(sigma*a(h*i,tau*k)/(h**2) - b(h*i,tau*k)/(2*h))
                 B.append(2*sigma*a(h*i,tau*k)/(h**2) - c(h*i,tau*k)+ 1/tau)
                 C.append(sigma*a(h*i,tau*k)/(h**2) + b(h*i,tau*k)/(2*h))
-                G.append(-U[i][k-1]/tau - (1-sigma)*Lh(i,k-1,h,tau,U) - f(h*i,tau*k-tau/2))    
+                G.append(-U[i][k-1]/tau - (1-sigma)*Lh(i,k-1,h,tau,U) - f(h*i,tk))    
             A.append(-beta2(tau*k)/h)
             B.append(-beta1(tau*k)-beta2(tau*k)/h)
             C.append(0)
@@ -143,27 +146,29 @@ def plot_table(N_lst,M,scheme,table_num): #table_num: (0,1,2,3) = (table2,table1
     U2_lst = []
     for i in range(len(N_lst)):
         N = N_lst[i]       
-        if scheme == 1: M = get_M(N,T)
+        if scheme == 1 or sigma == 0: M = get_M(N,T)
         h,tau = 1/N,T/M
         U = explicit_scheme(N,M) if scheme == 1 else weights_scheme(N,M,sigma)
         U1_lst.append(U)
         if i > 0: U2_lst.append(U)
         if i+1 == table_num: table1(N,M,U)
     N = N_lst[-1]*2       
-    if scheme == 1: M = get_M(N,T)
+    if scheme == 1 or sigma == 0: M = get_M(N,T)
     h,tau = 1/N,T/M
     U = explicit_scheme(N,M) if scheme == 1 else weights_scheme(N,M,sigma)
     U2_lst.append(U)
     if table_num == 0: table2(U1_lst,U2_lst)
 
-#plot_table([5,10,20],0,1,1) #schema1, N = 5
-#plot_table([5,10,20],0,1,2) #schema1, N = 10
-#plot_table([5,10,20],0,1,3) #schema1, N = 20
-#plot_table([5,10,20],0,1,0) #schema1, table for all
+#explicit scheme:
+#plot_table([5,10,20],0,1,1) #N = 5
+#plot_table([5,10,20],0,1,2) #N = 10
+#plot_table([5,10,20],0,1,3) #N = 20
+#plot_table([5,10,20],0,1,0) #table for all
 
-#plot_table([5,10,20],10,2,1) #schema2, N = 5, M = 10
-#plot_table([5,10,20],10,2,2) #schema2, N = 10, M = 10
-#plot_table([5,10,40],10,2,3) #schema2, N = 20, M = 10
-#plot_table([5,10,20],10,2,0) #schema2, table for all
+#weights scheme:
+#plot_table([5,10,20],10,2,1) #N = 5, M = 10
+#plot_table([5,10,20],10,2,2) #N = 10, M = 10
+#plot_table([5,10,20],10,2,3) #N = 20, M = 10
+plot_table([5,10,20],10,2,0) #table for all
 
 
