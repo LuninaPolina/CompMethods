@@ -16,17 +16,17 @@ def beta2(t):return 1
 
 #depends on u(x,t)
 def u(x,t):
-    return x+t
-    #return x**3 + t**3 
+    #return x+t
+    return x**3 + t**3 
 def dudx(x,t):
-    return 1
-    #return 3*x**2 
+    #return 1
+    return 3*x**2 
 def dudt(x,t):
-    return 1
-    #return 3*t**2 
+    #return 1
+    return 3*t**2 
 def du2dx(x,t):
-    return 0
-    #return 6*x 
+    #return 0
+    return 6*x 
 
 def fi(x): return u(x,0)
 def f(x,t): return dudt(x,t) - du2dx(x,t) - u(x,t)*math.sin(x)
@@ -97,14 +97,14 @@ def weights_scheme(N,M,sigma):
             G.append(alpha(tau*k))
             tk = tau*k-tau/2 if sigma == 1/2 else tau*k
             for i in range(1,N):
-                A.append(sigma*a(h*i,tau*k)/(h**2) - b(h*i,tau*k)/(2*h))
-                B.append(2*sigma*a(h*i,tau*k)/(h**2) - c(h*i,tau*k)+ 1/tau)
-                C.append(sigma*a(h*i,tau*k)/(h**2) + b(h*i,tau*k)/(2*h))
-                G.append(-U[i][k-1]/tau - (1-sigma)*Lh(i,k-1,h,tau,U) - f(h*i,tk))    
+                A.append(sigma*a(h*i,tau*k)/(h**2) - sigma*b(h*i,tau*k)/(2*h))
+                B.append(2*sigma*a(h*i,tau*k)/(h**2) - sigma*c(h*i,tau*k)+ 1/tau)
+                C.append(sigma*a(h*i,tau*k)/(h**2) + sigma*b(h*i,tau*k)/(2*h))
+                G.append(-U[i][k-1]/tau - (1-sigma)*Lh(i,k-1,h,tau,U) - f(h*i,tk))
             A.append(-beta2(tau*k)/h)
             B.append(-beta1(tau*k)-beta2(tau*k)/h)
             C.append(0)
-            G.append(beta(tau*k))   
+            G.append(beta(tau*k))
             for i in range(N+1): U[i][k] = sweep(N,A,B,C,G)[i]
     return U
 
@@ -163,12 +163,12 @@ def plot_table(N_lst,M,scheme,table_num): #table_num: (0,1,2,3) = (table2,table1
 #plot_table([5,10,20],0,1,1) #N = 5
 #plot_table([5,10,20],0,1,2) #N = 10
 #plot_table([5,10,20],0,1,3) #N = 20
-#plot_table([5,10,20],0,1,0) #table for all
+plot_table([5,10,20],0,1,0) #table for all
 
 #weights scheme:
 #plot_table([5,10,20],10,2,1) #N = 5, M = 10
 #plot_table([5,10,20],10,2,2) #N = 10, M = 10
 #plot_table([5,10,20],10,2,3) #N = 20, M = 10
-plot_table([5,10,20],10,2,0) #table for all
+#plot_table([5,10,20],10,2,0) #table for all
 
 
