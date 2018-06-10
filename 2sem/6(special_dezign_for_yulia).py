@@ -129,11 +129,11 @@ def table1(N,M,U):
     trace = go.Table(
         header=dict(values=['x/t']+[str(W[0][i][1]) for i in range(len(W[0]))],
                 fill = dict(color=['#e1bccf','#fbcfe5']),
-                font = dict(size = 16),
-                height = 40),
+                font = dict(size = 24),
+                height = 60),
         cells=dict(values= v.tolist(),
-                font = dict(size = 16),
-                height = 40,
+                font = dict(size = 24),
+                height = 60,
                 fill = dict(color = ['#fbcfe5', 'white']))) 
     data = [trace] 
     plotly.offline.plot(data)    
@@ -143,11 +143,11 @@ def table2(U1_lst,U2_lst):
     trace = go.Table(
         header=dict(values=['h','tau','||ex - u||','||u - u2||'],
                 fill = dict(color=['#e1bccf','#fbcfe5']),
-                font = dict(size = 16),
-                height = 40),
+                font = dict(size = 24),
+                height = 60),
         cells=dict(values=[[0.2,0.1,0.05],[0.02,0.005,0.00125],list(map(lambda x: round(x,8),norm1)),list(map(lambda x: round(x,8),norm2))],
-                font = dict(size = 16),
-                height = 40,
+                font = dict(size = 24),
+                height = 60,
                 fill = dict(color = ['#fbcfe5', 'white'])))    
     data = [trace]
     plotly.offline.plot(data)    
@@ -182,5 +182,3 @@ plot_table([5,10,20],0,1,3) #N = 20
 #plot_table([5,10,20],10,2,2) #N = 10, M = 10
 #plot_table([5,10,20],10,2,3) #N = 20, M = 10
 #plot_table([5,10,20],10,2,0) #table for all
-
-
